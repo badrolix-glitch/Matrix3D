@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Gabik's matrix...</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #message {
+      position: fixed;
+      right: 4vw;
+      bottom: 5vh;
+      color: #39ff14;
+      font: 600 clamp(18px, 2.4vw, 36px) Consolas, "Courier New", monospace;
+      text-shadow: 0 0 7px #39ff14, 0 0 20px #00ff66;
+      letter-spacing: 0.04em;
+      opacity: 1;
+      transition: opacity 700ms ease;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="rain"></canvas>
+  <div id="message">For my little son Gabik</div>
+
+  <script>
+    const canvas = document.getElementById("rain");
+    const ctx = canvas.getContext("2d");
+    const message = document.getElementById("message");
+
+    const phrases = [
+      "Wake up, Neo...",
+      "The Matrix has you...",
+      "Follow the white rabbit.",
+      "Knock, knock, Neo.",
+      "Code written by Badro for Gabik",
+    ];
+
+    const characters = "ア イ ウ エ オ カ キ ク ケ コ サ シ ス セ ソ タ チ ツ テ ト ナ ニ ヌ ネ ノ 0 1 2 3 4 5 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z";
+
+    let width, height, columns;
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      width = window.innerWidth;
+      height = window.innerHeight;
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Более крупные потоки расположены реже,
+      // чтобы они не перекрывали друг друга слишком сильно.
+      const columnWidth = 9;     // было 24 — потоков станет примерно в 2,7 раза больше
+      const count = Math.ceil(width / columnWidth);
+
+      columns = Array.from({ length: count }, (_, i) => {
+        const size = 13 + Math.random() * 15;
+
+        return {
+          x: i * columnWidth + Math.random() * 4,
+          size,
+          // Медленные потоки — примерно от 0.25 до 0.8 символа за кадр.
+		  speed: 0.125 + Math.random() * 0.275, // было 0.25 + случайное значение до 0.55
+          y: Math.random() * height,
+          bold: Math.random() < 0.35
+        };
+      });
+    }
+
+    function drawRain() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.02)";  // последнее значение управляет затуханием 0.02
+      ctx.fillRect(0, 0, width, height);
+
+      for (const column of columns) {
+        const char = characters[
+          Math.floor(Math.random() * characters.length)
+        ];
+
+        ctx.font = `${column.bold ? "bold " : ""}${column.size}px Consolas, "Courier New", monospace`;
+
+        // Крупные символы ярче и выглядят ближе.
+        const brightness = 0.35 + (column.size - 13) / 15 * 0.55;
+        ctx.fillStyle = `rgba(0, 255, 70, ${brightness})`;  
+        ctx.fillText(char, column.x, column.y);
+
+        column.y += column.speed * column.size;
+
+        if (column.y > height && Math.random() > 0.985) {
+          column.y = -column.size * (1 + Math.random() * 20);
+        }
+      }
+
+      requestAnimationFrame(drawRain);
+    }
+
+	const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+	async function typePhrase(text) {
+	  message.textContent = "";
+
+	  for (const char of text) {
+		message.textContent += char;
+		await wait(120); // задержка между буквами
+	  }
+	}
+
+	async function erasePhrase() {
+	  while (message.textContent.length > 0) {
+		message.textContent = message.textContent.slice(0, -1);
+		await wait(0.1); // скорость стирания
+	  }
+	}
+
+	async function runMessages() {
+	  let phraseIndex = 0;
+
+	  while (true) {
+		await typePhrase(phrases[phraseIndex]);
+		await wait(2600); // сколько фраза остаётся на экране
+		await erasePhrase();
+		await wait(350); // пауза перед следующей фразой
+
+		phraseIndex = (phraseIndex + 1) % phrases.length;
+	  }
+	}
+
+	runMessages();
+
+
+    window.addEventListener("resize", resize);
+    resize();
+    drawRain();
+  </script>
+</body>
+</html>
